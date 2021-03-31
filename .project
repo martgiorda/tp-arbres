@@ -14,4 +14,11 @@
 	<natures>
 		<nature>org.eclipse.jdt.core.javanature</nature>
 	</natures>
+	<linkedResources>
+		<link>
+			<name>Files/iris (1).csv</name>
+			<type>1</type>
+			<location>C:/Users/elake/OneDrive/Bureau/M2Miage/dataanalyse/projet_graphe/iris (1).csv</location>
+		</link>
+	</linkedResources>
 </projectDescription>

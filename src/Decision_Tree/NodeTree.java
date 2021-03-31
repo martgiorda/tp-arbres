@@ -4,31 +4,47 @@ public class NodeTree {
 /**
  * in this class we creat a nod of tree with diferents attribut 
  */
-	int value ; 
+	String attribut1 ; 
+	String attribut2;
+	String attribut3;
+	String attribut4;
+	String classe;
 public	NodeTree left ;
 	public NodeTree right ; 
 	
-	public NodeTree(int value, NodeTree left,NodeTree right) {
-		// TODO Auto-generated constructor stub
-	this.value=value;
-	this.left=left;
-	this.right=right;
-	}
 	
+	
+	
+
+	
+	public NodeTree(String attribut1, String attribut2, String attribut3, String attribut4, String classe,
+			NodeTree left, NodeTree right) {
+		super();
+		this.attribut1 = attribut1;
+		this.attribut2 = attribut2;
+		this.attribut3 = attribut3;
+		this.attribut4 = attribut4;
+		this.classe = classe;
+		this.left = left;
+		this.right = right;
+	}
+
 	/**
 	 * getters and setters 
 	 */
-
-	public int getValue() {
-		return value;
-	}
-
-	public void setValue(int value) {
-		this.value = value;
-	}
+	
 
 	public NodeTree getLeft() {
 		return left;
+	}
+
+
+	public String getClasse() {
+		return classe;
+	}
+
+	public void setClasse(String classe) {
+		this.classe = classe;
 	}
 
 	public void setLeft(NodeTree left) {
