@@ -1,5 +1,6 @@
 package Decision_Tree;
 import java.util.ArrayList;
+import java.util.HashMap;
 public class Tree {
 
 	NodeTree root ;
@@ -12,40 +13,24 @@ public class Tree {
 		
 	}
 	
-	public Tree(NodeTree root,int nbr_noeud) {
+	public Tree(NodeTree root) {
 		// TODO Auto-generated constructor stub
 		this.root=root;
-		this.nbr_noeud=nbr_noeud;
+		
 		tree.add(root);
 		
 	}
 	
-	public void addNode(NodeTree newNode,NodeTree rootExplore) {
-		/**
-		 * in this example i want to build binary tree with numeric values ,
-		 * to do that i will test every time if the new node that i want to add is lower or higher
-		 * if it is lower i will put it in the left side else i will add it in the right one 
-		 */
-		if (rootExplore==null)
-			return ;
-		if(newNode.getValue()>=rootExplore.getValue()) {
-			
-			if(rootExplore.getRight()==null) {
-				rootExplore.setRight(rootExplore.getRight());
-			tree.add(newNode);}
-			/**
-			 * if the next node is not empty we  backtrack the tree until find the empty one 
-			 */
-			else addNode(newNode, rootExplore.getRight());
-			
-		}
-		if(newNode.getValue()<=rootExplore.getValue()) {
-			if(rootExplore.getLeft()==null) {
-				rootExplore.setRight(rootExplore.getLeft());
-				tree.add(newNode);}
-			else addNode(newNode, rootExplore.getLeft());
-			
-		}
+	
+		
+		
+		
+		
+		
+		
+		
+		
+		
 		
 	}
 	/**
