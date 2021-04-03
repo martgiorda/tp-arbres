@@ -21,4 +21,15 @@
 			<location>C:/Users/elake/OneDrive/Bureau/M2Miage/dataanalyse/projet_graphe/iris (1).csv</location>
 		</link>
 	</linkedResources>
+	<filteredResources>
+		<filter>
+			<id>1617299527484</id>
+			<name></name>
+			<type>30</type>
+			<matcher>
+				<id>org.eclipse.core.resources.regexFilterMatcher</id>
+				<arguments>node_modules|.git|__CREATED_BY_JAVA_LANGUAGE_SERVER__</arguments>
+			</matcher>
+		</filter>
+	</filteredResources>
 </projectDescription>

@@ -16,7 +16,9 @@ import java.util.stream.Collectors;
 public class DataSet {
 
 	static String [] arbre;
-
+	static HashMap<Double,String> mapClass;
+	private static String condition;
+	
 
 	public DataSet() {
 		// TODO Auto-generated constructor stub
@@ -31,12 +33,12 @@ public class DataSet {
 	public static ArrayList<HashMap<String,Double>> getFileData(String _path){
 
 
-
 		Path path=Paths.get(_path);
-
-		String[] lignes;
+		
+		ArrayList<String> lignes = new ArrayList<String>();
+		
 		try {
-			lignes = Files.readAllLines(path).toArray(new String [] {});
+			lignes = (ArrayList<String>) Files.readAllLines(path);
 		} catch (IOException e) {
 
 			lignes=null;
@@ -44,25 +46,44 @@ public class DataSet {
 			e.printStackTrace();
 		}
 
-
-
 		// TODO Auto-generated catch block
 
-
 		ArrayList<HashMap<String,Double>> all=new ArrayList<>();
-
+		
+		
+		int classAttributeIndex = 4;
+		
+		//System.out.println(lignes.stream().map(ligne -> ligne.split(",")[classAttributeIndex]));
+		/*
+		List<String> allClass = lignes.stream().map(ligne -> ligne.split(",")[4]).distinct().sorted().collect(Collectors.toList());
+		*/
 		HashMap<String,Double> map2=new HashMap<>() ;
+		mapClass=new HashMap<>() ;
+		
+		/*
+		for (double i=0.0 ; i<allClass.size() ; i++) {
+			map2.put(allClass.get((int )i),i);
+			mapClass.put(i,allClass.get((int )i));
+		}
+		*/
+		
 		map2.put("Iris-setosa",1.0);
 		map2.put("Iris-versicolor",2.0);
 		map2.put("Iris-virginica",3.0);
-
-		for(int i=0;i<lignes.length;i++) {
+		
+		
+		mapClass.put(1.0,"Iris-setosa");
+		mapClass.put(2.0,"Iris-versicolor");
+		mapClass.put(3.0,"Iris-virginica");
+		
+		
+		for(String ligne : lignes) {
 			HashMap<String,Double> map = new HashMap<>();
 
 
-			if(lignes[i].isEmpty())
+			if(ligne.isEmpty())
 				continue;
-			String [] t=lignes[i].split(",");
+			String [] t = ligne.split(",");
 
 			map.put("classification",map2.get(t[4]));
 			map.put("petalWidth",Double.parseDouble(t[3]));
@@ -86,34 +107,39 @@ public class DataSet {
 
 
 	}
-	public static void buildTree(String _path,String varibaleType,String critere) {
+	public static String [] buildTree(ArrayList<HashMap<String,Double>> fileData,String varibaleType,String critere) {
 
 		//read the file of data 
 
 		//arbre =tableau
 
-
-		ArrayList<HashMap<String,Double>> fileData = getFileData(_path);
-		arbre=new String [1000];
+		long startTime = System.nanoTime();    
+		// ... the code being measured ...    
+		
+		arbre=new String [10000];
 
 		addNode(fileData,0) ;
-		//return null;
-		System.out.println(Arrays.asList(arbre));
 		
-		displayChilds(0,1);
+		long timeToCalculate = System.nanoTime() - startTime;
+		
+		//return null;
+		//System.out.println("Time to calculate : "+timeToCalculate/1000/1000 + " ms");
+		
+		displayChildren(0,1);
+		
+		long timeToDisplay = System.nanoTime() - startTime;
+		
+		//return null;
+		//System.out.println("");
+		
+		//System.out.println("Time after display : "+timeToDisplay/1000/1000+ " ms");
+		
+		return arbre;
 		
 	}
 	
-	public static void displayChilds(int index, int offset) {
+	public static void displayChildren(int index, int offset) {
 		
-		/*
-		if (index == 0) {
-			System.out.print("root :"+arbre[index]);
-		}
-		else {
-			System.out.print("index"+index+":"+arbre[index]);
-		}
-		*/
 		
 		System.out.print(arbre[index]);
 		
@@ -124,7 +150,7 @@ public class DataSet {
 					System.out.print("\t");
 				}
 				
-				displayChilds((index*2) +1, offset+1);
+				displayChildren((index*2) +1, offset+1);
 			}	
 			if (arbre[(index*2) +2] != null) {
 				System.out.println();
@@ -132,7 +158,7 @@ public class DataSet {
 					System.out.print("\t");
 				}
 				
-				displayChilds((index*2) +2, offset+1);
+				displayChildren((index*2) +2, offset+1);
 				
 			}	
 		}
@@ -147,15 +173,17 @@ public class DataSet {
 		 */
 		double median;
 
-		double gain= -1;
+		double gain;
 
 		String maxCondition="";
 		
-		double maxGain= -1;
+		double maxGain= 0;
 		
 		String condition=null;
-
-
+		
+		ArrayList<HashMap<String,Double>> filsGauche;
+		ArrayList<HashMap<String,Double>> filsDroit;
+		
 		ArrayList<String> attributs=new ArrayList<>();
 		for (Entry<String, Double> entry : data.get(0).entrySet()) {
 			attributs.add(entry.getKey());
@@ -163,58 +191,48 @@ public class DataSet {
 		}
 
 		attributs.remove("classification");
+		
+		//System.out.println("---");
 
 		for(String attribut:attributs) {
-			ArrayList<HashMap<String,Double>> filsGauche = new ArrayList<>();
-			ArrayList<HashMap<String,Double>> filsDroit =  new ArrayList<>();
-
+			
 			List<Double> allAttributValues=data.stream().map(e -> e.get(attribut)).collect(Collectors.toList());
 
-
 			Collections.sort(allAttributValues);
-
 			
+			//System.out.println(allAttributValues.stream().distinct().collect(Collectors.toList()));
 			
-			median=median(allAttributValues);
-			//median=mean(allAttributValues);
-			
-			
-			condition=attribut+"<="+median;
-
-			
-
-			for(HashMap<String, Double>dataLigne:data) {
-
+			for (double divideValue : allAttributValues.stream().distinct().collect(Collectors.toList())) {
 				
-				if(dataLigne.get(attribut)<=median) {
-					filsGauche.add(dataLigne);
+				filsGauche = new ArrayList<>();
+				filsDroit =  new ArrayList<>();
+				
+				condition=attribut+"<="+divideValue;
+				
+				//System.out.println(condition);
 
+				for(HashMap<String, Double>dataLigne:data) {
+					
+					if(dataLigne.get(attribut)<=divideValue) {
+					
+						filsGauche.add(dataLigne);
+					}
+					else {
+						filsDroit.add(dataLigne);
+					}
 				}
+				
+				gain=getGain(data,filsGauche,filsDroit);
+				
+				if( gain > maxGain) {
 
-				else {
-					filsDroit.add(dataLigne);
-
+					maxGain = gain;
+					maxCondition = condition;
+					
 				}
-
-
-			}
-
-
-			gain=getGain(data,filsGauche,filsDroit);
-			
-			if( gain>maxGain) {
-				
-				
-				
-				maxGain=gain;
-				maxCondition=condition;
-				
-			
-
 			}
 		}
-		
-		
+
 		return maxCondition;
 
 	}
@@ -225,8 +243,6 @@ public class DataSet {
 		int taille = m.size();
 		double somme=0;
 
-
-		//System.out.println(m.size());
 		for(double s:m) {
 			somme=somme+s;
 		}
@@ -240,13 +256,16 @@ public class DataSet {
 	 */
 	public static double getEntropie(ArrayList<HashMap<String,Double>> data) {
 
-		double entropie =-1;
-		double pk=0;
+		double entropie=0;
+		double pk;
 		int tailleData=data.size();
 
 		HashMap<Double, Integer>classificationRef=new HashMap<>();
 		ArrayList<Double> allClassification=new ArrayList<>();
 
+		
+		//compter les occurences de chaque classe
+		
 		for(HashMap<String,Double>element:data) {
 
 
@@ -254,41 +273,44 @@ public class DataSet {
 
 				classificationRef.put(element.get("classification"),classificationRef.get(element.get("classification"))+1);
 
-
 			}
 			else {
-
 				//identification d'une nouvelle classe 
 				classificationRef.put(element.get("classification"),1);
 
 				allClassification.add(element.get("classification"));
 			}
 		}
+		
+		//System.out.println("...");
 
 		for (double classification : allClassification) {
 
-			//pk=classification/tailleData;
 			
-			pk=(double) (classificationRef.get(classification))/tailleData;
+			//pk = nombre de fois ou la classe est trouveee / taille de l echantillon
 			
-			/*System.out.println("classificationRef.get : "+classificationRef.get(classification));
-			System.out.println("taille : "+tailleData);
-			System.out.println(pk);*/
-				
-			entropie -= pk*Math.log(pk);
+			pk= ((double)classificationRef.get(classification))/tailleData;
+			
+			entropie += (pk*Math.log(pk));
  
 		}
-
-
-		return entropie ;
+		
+		return (-1 * entropie) ;
 
 	}
 	public static double getGain(ArrayList<HashMap<String,Double>> data,ArrayList<HashMap<String,Double>>filsGauche,ArrayList<HashMap<String,Double>>filsDroit) {
-
-		return getEntropie(data)-(filsGauche.size()*getEntropie(filsGauche)/data.size())-(filsDroit.size()*getEntropie(filsDroit)/data.size());
-
-
-
+		
+		double entropieGenerale = 0;
+		double entropieGauche, entropieDroite;
+		
+		entropieGenerale = getEntropie(data);
+		
+		entropieGauche = ( (  ((double)filsGauche.size())/data.size())*getEntropie(filsGauche));
+		
+		entropieDroite = (  ( ((double)filsDroit.size())/data.size())*getEntropie(filsDroit));
+		
+		return entropieGenerale-entropieGauche-entropieDroite;
+	
 	}
 
 
@@ -296,53 +318,43 @@ public class DataSet {
 
 
 		int middle = m.size()/2;
-		//System.out.println("middle\t"+middle);
-		// System.out.println(m.size());
+	
 		if (m.size()%2 == 1) {
 			return m.get(middle);
 		} else {
 			return ((m.get(middle-1) + m.get(middle) )/ 2.0);
 		}
 	}
+	
+	public static Double percentile(List<Double> m, double percentile) {
+	    int index = (int) Math.ceil(percentile / 100.0 * m.size());
+	    return m.get(index-1);
+	}
 
 
 	public static void addNode(ArrayList<HashMap<String,Double>> data,int indexcurrent) {
-		//System.out.println(data.size()+" indexcurrent= "+indexcurrent);
 
 		if(data.size()==0)
 			return;
 		ArrayList<HashMap<String,Double>> donneesGauche = new ArrayList<>();
 		ArrayList<HashMap<String,Double>> donneesDroite =  new ArrayList<>();
-		//condition d'arret :tous les noeud doievent etre pure =>entropie=0
+		
 
 		String a=getCondition(data);
 		
 		arbre[indexcurrent]=a;
 		
-		if (data.size()==1) {
-			return;
-		}
-		
-		
-		HashMap<Double,String> mapClass=new HashMap<>() ;
-		mapClass.put(1.0,"Iris-setosa");
-		mapClass.put(2.0,"Iris-versicolor");
-		mapClass.put(3.0,"Iris-virginica");
-
 
 		String attribut =a.split("<=")[0];
 		double value=Double.parseDouble(a.split("<=")[1]);
 		
-
 		
 		for(HashMap<String,Double> ligne:data) {
 			
-			
-			
 			if(ligne.get(attribut) <= value) {
+			
 				donneesGauche.add(ligne);
-				
-
+	
 			}
 
 			else {
@@ -351,11 +363,12 @@ public class DataSet {
 			}
 		}
 		
+		//condition d'arret :tous les noeud doivent etre purs => 1 seule classe presente
+		
 		double differentClassGauche = donneesGauche.stream().map(e -> e.get("classification")).distinct().count();
-		double differentClassDroite = donneesDroite.stream().map(e -> e.get("classification")).distinct().count();
 		
 		if (differentClassGauche == 1) {
-			
+					
 			arbre[(2*indexcurrent)+1]=mapClass.get(donneesGauche.get(0).get("classification"));
 			
 		}
@@ -363,6 +376,12 @@ public class DataSet {
 			
 			addNode(donneesGauche, (indexcurrent*2)+1);
 		}
+	
+	
+	
+		double differentClassDroite = donneesDroite.stream().map(e -> e.get("classification")).distinct().count();
+		
+		
 		
 		if (differentClassDroite == 1) {	
 			
@@ -374,22 +393,80 @@ public class DataSet {
 			
 			addNode(donneesDroite, (indexcurrent*2)+2);
 		}
+		
+		
 
 	}
 
-
-
-
-
+	
+	public static void predict(String [] arbre, ArrayList<HashMap<String,Double>> testData) {
+		
+		String node;
+		double errors = 0;
+		int total = testData.size();
+		int index = 0;
+		
+		for (HashMap<String,Double> ligne : testData) {
+			
+			index = 0;
+			
+			node = arbre[index];
+			
+			//System.out.println(node);
+			
+			while (node.contains("<=")) {
+				
+				//node is a condition
+				
+				String attribut =node.split("<=")[0];
+				double value=Double.parseDouble(node.split("<=")[1]);
+				
+				if (ligne.get(attribut) <= value) {
+					index = index*2 +1;
+				}
+				else {
+					index = index*2 +2;
+				}
+				
+				node = arbre[index];
+			}
+				
+			//node contains a class
+			
+			//System.out.println("index : "+index);
+			
+			String classeLigne = mapClass.get(ligne.get("classification"));
+			
+			//System.out.println("devrait : "+classeLigne+ " | trouve : " + node );
+			
+			if (classeLigne != node) {
+				errors ++;
+			}
+			
+		}
+		System.out.println();
+		
+		System.out.println("taux erreur (prediction) : "+(errors/total*100)+" %");
+		
+	}
+	
 	public static void main(String[] args) throws IOException{
-		// TODO Auto-generated method stub
-		/**
-		 * upload the file
-		 */
-
-
-
-		buildTree("D:\\Téléchargements\\iris.data","", "");
+		
+		ArrayList<HashMap<String,Double>> fileData = getFileData("D:\\Téléchargements\\iris.data");
+		
+		Collections.shuffle(fileData);
+		
+		double proportion = 0.6;
+		
+		ArrayList<HashMap<String,Double>> T = new ArrayList<HashMap<String,Double>>(fileData.subList(0, (int)(fileData.size()*proportion)));
+		
+		ArrayList<HashMap<String,Double>> A = new ArrayList<HashMap<String,Double>>(fileData.subList((int)(fileData.size()*proportion), fileData.size()));
+		
+		String [] arbre = buildTree(T,"", "");
+		
+		displayChildren(0,1);
+		
+		predict(arbre, A);
 
 	}
 }
