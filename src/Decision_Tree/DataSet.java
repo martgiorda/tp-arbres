@@ -23,13 +23,15 @@ public class DataSet {
 	public DataSet() {
 		// TODO Auto-generated constructor stub
 	}
+	
 	/**
-	 * function that get data from file
-	 * @param _path :path of file
-	 * @return data 
+	 * Returns an array of objects matching the file given in parameters
+	 * 
+	 * @param _path : the csv file (no column names)
+	 * @param attributeToPredict : the name of the attribute to predict
+	 * @param allAttributes : the attribute list in the good order
+	 * @return
 	 */
-
-
 	public static ArrayList<HashMap<String,Double>> getFileData(String _path, String attributeToPredict, String allAttributes){
 
 
@@ -45,13 +47,31 @@ public class DataSet {
 
 			e.printStackTrace();
 		}
-
-
+		
+		
+		/*
+		 * We chose to represent the data as an array of String-Double map to be able to select the attributes with their names
+		 * e.i : attribute.get("sepalLength")
+		 * 
+		 */
 		ArrayList<HashMap<String,Double>> all=new ArrayList<>();
 		
 		
 		String [] split = allAttributes.split(",");
 		
+		
+		
+		/**
+		 * The problem is that the class to predict is a String so we need 2 hashmaps mapClass/map2 that translate the class into a double
+		 * so :
+		 * map2 contains 
+		 * setosa -> 1.0 
+		 * versicolor -> 2.0 
+		 * 
+		 * mapClass contains 
+		 * 1.0  -> setosa 
+		 * 2.0 ->  versicolor
+		 */
 		for (int i=0; i<split.length ; i++)  {
 			
 			if (split[i].equals(attributeToPredict)) {
@@ -107,215 +127,57 @@ public class DataSet {
 
 	}
 	
-	public static String [] buildTree(ArrayList<HashMap<String,Double>> fileData,String varibaleType,String critere) {
+	/**
+	 * Returns an array containing all the nodes (String) of the decision tree
+	 * @param fileData : the array of objects containing the data
+	 * @param variableType : continuous, symbolic .. 
+	 * @param critere : entropia/Gini
+	 * @return
+	 */
+	public static String [] buildTree(ArrayList<HashMap<String,Double>> fileData,String variableType,String critere) {
 
-		//read the file of data 
-
-		//arbre =tableau
-
-		long startTime = System.nanoTime();    
-		// ... the code being measured ...    
 		
+		long startTime = System.nanoTime();    
+		
+		/**
+		 * The nodes are stored in an array with :
+		 *  index0=root
+		 *  index=index*2+1 is left child
+		 *  index=index*2+2 is right child
+		 *  
+		 *  Requires a large array because of the potential depth and number of branches of the tree
+		 *  Could be resized automatically and use Hashmap<Integer, String>
+		 */
 		arbre=new String [100000000];
-
+		
+		
 		addNode(fileData,0) ;
 		
 		long timeToCalculate = System.nanoTime() - startTime;
 		
-		//return null;
 		System.out.println("Time to calculate : "+timeToCalculate/1000/1000 + " ms" + " ou "+timeToCalculate/1000/1000/1000+ " s");
-		
-		//displayChildren(0,1);
-		
-		long timeToDisplay = System.nanoTime() - startTime;
-		
-		//return null;
-		//System.out.println("");
-		
-		//System.out.println("Time after display : "+timeToDisplay/1000/1000+ " ms");
 		
 		return arbre;
 		
 	}
 	
-	public static void displayChildren(int index, int offset) {
-		
-		
-		System.out.print(arbre[index]);
-		
-		if ((index*2) +1 <= 1000) {
-			if (arbre[(index*2) +1] != null) {
-				System.out.println();
-				for (int i=0;i<offset;i++) {
-					System.out.print("\t");
-				}
-				
-				displayChildren((index*2) +1, offset+1);
-			}	
-			if (arbre[(index*2) +2] != null) {
-				System.out.println();
-				for (int i=0;i<offset;i++) {
-					System.out.print("\t");
-				}
-				
-				displayChildren((index*2) +2, offset+1);
-				
-			}	
-		}
-		
-		
-	}
-
-	public static int getProfondeur(int index) {
-		
-		
-		if (arbre[index] != null) {
-			
-			return 1 +Math.max(getProfondeur(index*2 + 1),getProfondeur(index*2 + 2));
-		}
-		
-		else {
-			return 0;
-		}
-			
-		
-	}
-	
-	public static String getCondition(ArrayList<HashMap<String,Double>> data) {
-		/**
-		 * calcule entropie pour la data 
-		 * et renvoyer la condition correspandante 
-		 */
-		double median;
-
-		double gain;
-
-		String maxCondition="";
-		
-		double maxGain= 0;
-		
-		String condition=null;
-		
-		ArrayList<HashMap<String,Double>> filsGauche;
-		ArrayList<HashMap<String,Double>> filsDroit;
-		
-		ArrayList<String> attributs=new ArrayList<>();
-		for (Entry<String, Double> entry : data.get(0).entrySet()) {
-			attributs.add(entry.getKey());
-
-		}
-
-		attributs.remove(attributeToPredict);
-		
-		//System.out.println("---");
-
-		for(String attribut:attributs) {
-			
-			List<Double> allAttributValues=data.stream().map(e -> e.get(attribut)).collect(Collectors.toList());
-
-			Collections.sort(allAttributValues);
-			
-			//System.out.println(allAttributValues.stream().distinct().collect(Collectors.toList()));
-			
-			for (double divideValue : allAttributValues.stream().distinct().collect(Collectors.toList())) {
-				
-				filsGauche = new ArrayList<>();
-				filsDroit =  new ArrayList<>();
-				
-				condition=attribut+"<="+divideValue;
-				
-				//System.out.println(condition);
-
-				for(HashMap<String, Double>dataLigne:data) {
-					
-					if(dataLigne.get(attribut)<=divideValue) {
-					
-						filsGauche.add(dataLigne);
-					}
-					else {
-						filsDroit.add(dataLigne);
-					}
-				}
-				
-				gain=getGain(data,filsGauche,filsDroit);
-				
-				if( gain > maxGain) {
-
-					maxGain = gain;
-					maxCondition = condition;
-					
-				}
-			}
-		}
-
-		return maxCondition;
-
-	}
-	
-	public static double getGain(ArrayList<HashMap<String,Double>> data,ArrayList<HashMap<String,Double>>filsGauche,ArrayList<HashMap<String,Double>>filsDroit) {
-		
-		double entropieGenerale = 0;
-		double entropieGauche, entropieDroite;
-		
-		entropieGenerale = getEntropie(data);
-		
-		entropieGauche = ( (  ((double)filsGauche.size())/data.size())*getEntropie(filsGauche));
-		
-		entropieDroite = (  ( ((double)filsDroit.size())/data.size())*getEntropie(filsDroit));
-		
-		return entropieGenerale-entropieGauche-entropieDroite;
-	
-	}
-	
-	public static double getEntropie(ArrayList<HashMap<String,Double>> data) {
-
-		double entropie=0;
-		double pk;
-		int tailleData=data.size();
-
-		HashMap<Double, Integer>classificationRef=new HashMap<>();
-		ArrayList<Double> allClassification=new ArrayList<>();
-
-		
-		//compter les occurences de chaque classe
-		
-		for(HashMap<String,Double>element:data) {
-
-
-			if(classificationRef.get(element.get(attributeToPredict))!=null) {
-
-				classificationRef.put(element.get(attributeToPredict),classificationRef.get(element.get(attributeToPredict))+1);
-
-			}
-			else {
-				//identification d'une nouvelle classe 
-				classificationRef.put(element.get(attributeToPredict),1);
-
-				allClassification.add(element.get(attributeToPredict));
-			}
-		}
-		
-		//System.out.println("...");
-
-		for (double classification : allClassification) {
-
-			
-			//pk = nombre de fois ou la classe est trouveee / taille de l echantillon
-			
-			pk= ((double)classificationRef.get(classification))/tailleData;
-			
-			entropie += (pk*Math.log(pk));
- 
-		}
-		
-		return (-1 * entropie) ;
-
-	}
+	/**
+	 * RECURSIVE
+	 * Function that is given the partition of data to branch and branch the tree
+	 * 
+	 * Calls getCondition that returns a String indicating the condition to branch
+	 * Parses the String to create the boolean test i.e transform "x-ege<=2.0" into ligne.get("x-ege") <= 2.0
+	 * Divides the data and calls itself with the children dataset
+	 * 
+	 * @param data : the partition to branch
+	 * @param indexcurrent : the index of the array to add the children nodes
+	 */
 	
 	public static void addNode(ArrayList<HashMap<String,Double>> data,int indexcurrent) {
 
 		if(data.size()==0)
 			return;
+		
 		ArrayList<HashMap<String,Double>> donneesGauche = new ArrayList<>();
 		ArrayList<HashMap<String,Double>> donneesDroite =  new ArrayList<>();
 		
@@ -380,7 +242,229 @@ public class DataSet {
 		
 
 	}
+	
+	/**
+	 * Returns the optimal condition (max gain) to branch the decision tree and divide data
+	 * Generate all conditions like attribute<=i for all attribute values
+	 * Divides data according to condition
+	 * Calculates gain for the condition
+	 * Return condition that has max gain
+	 * 
+	 * @param data : the data partition to branch
+	 * @return : a String containing the boolean test i.e : "attribute<=value" that will be parsed by addNode()
+	 */
+	public static String getCondition(ArrayList<HashMap<String,Double>> data) {
+		
+		double gain;
+		double maxGain= 0;
+		
+		String condition;
+		String maxCondition="";
+		
+		ArrayList<HashMap<String,Double>> filsGauche;
+		ArrayList<HashMap<String,Double>> filsDroit;
+		
+		
+		/**
+		 * Get all attributes to choose the condition from
+		 */
+		ArrayList<String> attributs=new ArrayList<>();
+		for (Entry<String, Double> entry : data.get(0).entrySet()) {
+			attributs.add(entry.getKey());
 
+		}
+
+		attributs.remove(attributeToPredict);
+		
+		
+		for(String attribut:attributs) {
+			
+			/**
+			 * Get all values for the attribute
+			 */
+			List<Double> allAttributValues=data.stream().map(e -> e.get(attribut)).collect(Collectors.toList());
+
+			Collections.sort(allAttributValues);
+			
+			/**
+			 * All unique attribute values
+			 */
+			for (double divideValue : allAttributValues.stream().distinct().collect(Collectors.toList())) {
+				
+				filsGauche = new ArrayList<>();
+				filsDroit =  new ArrayList<>();
+				
+				condition=attribut+"<="+divideValue;
+				
+				for(HashMap<String, Double>dataLigne:data) {
+					
+					if(dataLigne.get(attribut)<=divideValue) {
+					
+						filsGauche.add(dataLigne);
+					}
+					else {
+						filsDroit.add(dataLigne);
+					}
+				}
+				
+				gain=getGain(data,filsGauche,filsDroit);
+				
+				if( gain > maxGain) {
+
+					maxGain = gain;
+					maxCondition = condition;
+					
+				}
+			}
+		}
+
+		return maxCondition;
+
+	}
+	
+	/**
+	 * Evaluates information gain from condition
+	 * @param data : general data
+	 * @param filsGauche : left child data
+	 * @param filsDroit : right child data
+	 * @return
+	 */
+	public static double getGain(ArrayList<HashMap<String,Double>> data,ArrayList<HashMap<String,Double>>filsGauche,ArrayList<HashMap<String,Double>>filsDroit) {
+		
+		double entropieGenerale = 0;
+		double entropieGauche, entropieDroite;
+		
+		entropieGenerale = getEntropie(data);
+		
+		entropieGauche = ((((double)filsGauche.size())/data.size())*getEntropie(filsGauche));
+		
+		entropieDroite = ((((double)filsDroit.size())/data.size())*getEntropie(filsDroit));
+		
+		return entropieGenerale-entropieGauche-entropieDroite;
+	
+	}
+	
+	/**
+	 * Evaluates entropy for the parameter data
+	 * Store the number of occurences of each class in classificationRef
+	 * Calculate pk from classificationRef
+	 * @param data
+	 * @return
+	 */
+	
+	public static double getEntropie(ArrayList<HashMap<String,Double>> data) {
+
+		double entropie=0;
+		double pk;
+		int tailleData=data.size();
+		
+		//Store occurences of each class (class are stored as double)
+		HashMap<Double, Integer>classificationRef=new HashMap<>();
+		
+		//Store each different class
+		ArrayList<Double> allClassification=new ArrayList<>();
+
+		
+		//compter les occurences de chaque classe
+		
+		for(HashMap<String,Double>element:data) {
+
+			
+			//If the class is already present, just add 1 to the occurence number
+			//Else initiate to 1
+			
+			if(classificationRef.get(element.get(attributeToPredict))!=null) {
+
+				classificationRef.put(element.get(attributeToPredict),classificationRef.get(element.get(attributeToPredict))+1);
+
+			}
+			else {
+				//identification d'une nouvelle classe 
+				classificationRef.put(element.get(attributeToPredict),1);
+
+				allClassification.add(element.get(attributeToPredict));
+			}
+		}
+		
+
+		for (double classification : allClassification) {
+
+			
+			//pk = nombre de fois ou la classe est trouveee / taille de l echantillon
+			
+			pk= ((double)classificationRef.get(classification))/tailleData;
+			
+			entropie += (pk*Math.log(pk));
+ 
+		}
+		
+		return (-1 * entropie) ;
+
+	}
+	
+	/**
+	 * RECURSIVE
+	 * Displays tree with a tabulation offset for each level
+	 * @param index
+	 * @param offset
+	 */
+	public static void displayChildren(int index, int offset) {
+		
+		
+		System.out.print(arbre[index]);
+		
+		if ((index*2) +1 <= 1000) {
+			if (arbre[(index*2) +1] != null) {
+				System.out.println();
+				for (int i=0;i<offset;i++) {
+					System.out.print("\t");
+				}
+				
+				displayChildren((index*2) +1, offset+1);
+			}	
+			if (arbre[(index*2) +2] != null) {
+				System.out.println();
+				for (int i=0;i<offset;i++) {
+					System.out.print("\t");
+				}
+				
+				displayChildren((index*2) +2, offset+1);
+				
+			}	
+		}
+		
+		
+	}
+	
+	/**
+	 * RECURSIVE
+	 * Calculates depth of the tree
+	 * @param index
+	 * @return
+	 */
+	public static int getProfondeur(int index) {
+		
+		
+		if (arbre[index] != null) {
+			
+			return 1 +Math.max(getProfondeur(index*2 + 1),getProfondeur(index*2 + 2));
+		}
+		
+		else {
+			return 0;
+		}
+			
+		
+	}
+	
+	/**
+	 * Predicts the class of the testData individuals using the decision tree arbre
+	 * 
+	 * Returns nothing but displays error %
+	 * 
+	 * @param arbre
+	 * @param testData
+	 */
 	public static void predict(String [] arbre, ArrayList<HashMap<String,Double>> testData) {
 		
 		String node;
@@ -388,20 +472,20 @@ public class DataSet {
 		int total = testData.size();
 		int index = 0;
 		
+		//Loop for each vector to test
 		for (HashMap<String,Double> ligne : testData) {
 			
 			index = 0;
 			
 			node = arbre[index];
 			
-			//System.out.println(node);
-			
+			//Navigate the decision tree to find the node containing the class
 			while (node.contains("<=")) {
 				
 				//node is a condition
 				
 				String attribut =node.split("<=")[0];
-				double value=Double.parseDouble(node.split("<=")[1]);
+				double value= Double.parseDouble(node.split("<=")[1]);
 				
 				if (ligne.get(attribut) <= value) {
 					index = index*2 +1;
@@ -415,11 +499,8 @@ public class DataSet {
 				
 			//node contains a class
 			
-			//System.out.println("index : "+index);
-			
+			//Reminder : the class is stored as a number in the dataset (1.0, 2.0) 
 			String classeLigne = mapClass.get(ligne.get(attributeToPredict));
-			
-			//System.out.println("devrait : "+classeLigne+ " | trouve : " + node );
 			
 			if (classeLigne != node) {
 				errors ++;
@@ -432,51 +513,17 @@ public class DataSet {
 		
 	}
 	
-	/*
-	
-	public static double mean(List<Double> m) {
-
-
-		int taille = m.size();
-		double somme=0;
-
-		for(double s:m) {
-			somme=somme+s;
-		}
-		return somme/taille;
-
-	}
-	
-	public static double median(List<Double> m) {
-
-
-		int middle = m.size()/2;
-	
-		if (m.size()%2 == 1) {
-			return m.get(middle);
-		} else {
-			return ((m.get(middle-1) + m.get(middle) )/ 2.0);
-		}
-	}
-	
-	public static Double percentile(List<Double> m, double percentile) {
-	    int index = (int) Math.ceil(percentile / 100.0 * m.size());
-	    return m.get(index-1);
-	}
-	
-	*/
-	
 	public static void main(String[] args) throws IOException{
 		
 		
-		
+		//UNCOMMENT THE GROUP OF LINES CORRESPONDING TO THE DATASET YOU WANT
 		
 		// LETTERS
-		/*
+		
 		attributeToPredict = "lettr";
 		String attributeIndex =  "lettr,x-box,y-box,width,high,onpix,x-bar,y-bar,x2bar,y2bar,xybar,x2ybr,xy2br,x-ege,xegvy,y-ege,yegvx";
 		String file = "D:\\Téléchargements\\letter-recognition.data";
-		*/
+		
 		
 		// IRIS
 		/*
@@ -491,15 +538,17 @@ public class DataSet {
 		
 		double proportion = 0.6;
 		
-		ArrayList<HashMap<String,Double>> T = new ArrayList<HashMap<String,Double>>(fileData.subList(0, (int)(fileData.size()*proportion)));
+		//Training dataset
+		ArrayList<HashMap<String,Double>> A = new ArrayList<HashMap<String,Double>>(fileData.subList(0, (int)(fileData.size()*proportion)));
 		
-		ArrayList<HashMap<String,Double>> A = new ArrayList<HashMap<String,Double>>(fileData.subList((int)(fileData.size()*proportion), fileData.size()));
+		//Test dataset
+		ArrayList<HashMap<String,Double>> T = new ArrayList<HashMap<String,Double>>(fileData.subList((int)(fileData.size()*proportion), fileData.size()));
 		
-		String [] arbre = buildTree(T,"", "");
+		String [] arbre = buildTree(A,"", "");
 		
 		displayChildren(0,1);
 		
-		predict(arbre, A);
+		predict(arbre, T);
 		
 		System.out.println("profondeur : "+getProfondeur(0));
 
