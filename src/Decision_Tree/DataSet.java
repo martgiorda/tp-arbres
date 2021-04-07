@@ -1,4 +1,6 @@
-package Decision_Tree;
+package Rct_Decision_tree;
+
+//package Decision_Tree;
 import java.io.IOException;
 import java.nio.file.*;
 import java.util.ArrayList;
@@ -16,9 +18,11 @@ import java.util.stream.Collectors;
 public class DataSet {
 
 	static String [] arbre;
+	static String  [] arbre2;
 	static HashMap<Double,String> mapClass;
 	static int classAttributeIndex;
 	static String attributeToPredict;
+	static String critere;//entropie ou gini
 
 	public DataSet() {
 		// TODO Auto-generated constructor stub
@@ -136,7 +140,7 @@ public class DataSet {
 	 */
 	public static String [] buildTree(ArrayList<HashMap<String,Double>> fileData,String variableType,String critere) {
 
-		
+		//critere=critere;
 		long startTime = System.nanoTime();    
 		
 		/**
@@ -151,7 +155,7 @@ public class DataSet {
 		arbre=new String [100000000];
 		
 		
-		addNode(fileData,0) ;
+		addNode(fileData,0,critere) ;
 		
 		long timeToCalculate = System.nanoTime() - startTime;
 		
@@ -173,7 +177,7 @@ public class DataSet {
 	 * @param indexcurrent : the index of the array to add the children nodes
 	 */
 	
-	public static void addNode(ArrayList<HashMap<String,Double>> data,int indexcurrent) {
+	public static void addNode(ArrayList<HashMap<String,Double>> data,int indexcurrent,String critere) {
 
 		if(data.size()==0)
 			return;
@@ -186,7 +190,7 @@ public class DataSet {
  * node 
  * the condition returned by getCondition is always written in  this format :attribut<= value
  */
-		String a=getCondition(data);
+		String a=getCondition(data,critere);
 		
 		arbre[indexcurrent]=a;
 		
@@ -222,7 +226,7 @@ public class DataSet {
 		}
 		else {
 			
-			addNode(donneesGauche, (indexcurrent*2)+1);
+			addNode(donneesGauche, (indexcurrent*2)+1,critere);
 		}
 	
 	
@@ -240,7 +244,7 @@ public class DataSet {
 		}
 		else {
 			
-			addNode(donneesDroite, (indexcurrent*2)+2);
+			addNode(donneesDroite, (indexcurrent*2)+2,critere);
 		}
 		
 		
@@ -257,7 +261,7 @@ public class DataSet {
 	 * @param data : the data partition to branch
 	 * @return : a String containing the boolean test i.e : "attribute<=value" that will be parsed by addNode()
 	 */
-	public static String getCondition(ArrayList<HashMap<String,Double>> data) {
+	public static String getCondition(ArrayList<HashMap<String,Double>> data,String critere) {
 		
 		double gain;
 		double maxGain= 0;
@@ -311,7 +315,7 @@ public class DataSet {
 					}
 				}
 				
-				gain=getGain(data,filsGauche,filsDroit);
+				gain=getGain(data,filsGauche,filsDroit,critere);
 				
 				if( gain > maxGain) {
 
@@ -333,18 +337,44 @@ public class DataSet {
 	 * @param filsDroit : right child data
 	 * @return
 	 */
-	public static double getGain(ArrayList<HashMap<String,Double>> data,ArrayList<HashMap<String,Double>>filsGauche,ArrayList<HashMap<String,Double>>filsDroit) {
+	public static double getGain(ArrayList<HashMap<String,Double>> data,ArrayList<HashMap<String,Double>>filsGauche,ArrayList<HashMap<String,Double>>filsDroit,String critere) {
 		
 		double entropieGenerale = 0;
 		double entropieGauche, entropieDroite;
+		double giniGeneral=0;
+		double giniGauche,giniDroit;
 		
-		entropieGenerale = getEntropie(data);
+		double gain;
+		switch (critere) {
+		case "entropie": {
+			entropieGenerale = getCritere(data,"entropie");
+			
+			entropieGauche = ((((double)filsGauche.size())/data.size())*getCritere(filsGauche,"entropie"));
+			
+			entropieDroite = ((((double)filsDroit.size())/data.size())*getCritere(filsDroit,"entropie"));
+			
+			gain=entropieGenerale-entropieGauche-entropieDroite;
+			
+			return gain;
+			
+			//yield type;
+		}
+		case "gini":{
+			giniGeneral=getCritere(data,"gini");
+			
+			giniGauche=((((double)filsGauche.size())/data.size())*getCritere(filsGauche,"gini"));
+			
+			giniDroit= ((((double)filsDroit.size())/data.size())*getCritere(filsDroit,"gini"));
+			
+			gain =giniGeneral-giniGauche-giniDroit;
+			return gain ;
+			
+		}
+		default:
+			throw new IllegalArgumentException("Unexpected value: " + critere);
+		}
 		
-		entropieGauche = ((((double)filsGauche.size())/data.size())*getEntropie(filsGauche));
 		
-		entropieDroite = ((((double)filsDroit.size())/data.size())*getEntropie(filsDroit));
-		
-		return entropieGenerale-entropieGauche-entropieDroite;
 	
 	}
 	
@@ -356,9 +386,11 @@ public class DataSet {
 	 * @return
 	 */
 	
-	public static double getEntropie(ArrayList<HashMap<String,Double>> data) {
+	public static double getCritere(ArrayList<HashMap<String,Double>> data,String critere) {
 
 		double entropie=0;
+
+		double gini=0;
 		double pk;
 		int tailleData=data.size();
 		
@@ -390,21 +422,54 @@ public class DataSet {
 			}
 		}
 		
+switch (critere) {
+case "entropie": {
+	
+	for (double classification : allClassification) {
 
-		for (double classification : allClassification) {
-
-			
-			//pk = nombre de fois ou la classe est trouveee / taille de l echantillon
-			
-			pk= ((double)classificationRef.get(classification))/tailleData;
-			
-			entropie += (pk*Math.log(pk));
- 
-		}
 		
-		return (-1 * entropie) ;
+		//pk = nombre de fois ou la classe est trouveee / taille de l echantillon
+		
+		pk= ((double)classificationRef.get(classification))/tailleData;
+		
+		entropie += (pk*Math.log(pk));
 
 	}
+	
+	return (-1 * entropie) ;
+	
+	//yield type;
+}
+case "gini":{
+	
+	//pk = nombre de fois ou la classe est trouveee / taille de l echantillon
+	for (double classification : allClassification) {
+			pk= ((double)classificationRef.get(classification))/tailleData;
+			
+			gini+=Math.pow(pk,2);
+			
+			
+	}
+	return(1-gini);
+	
+	
+}
+	
+	
+default:
+	throw new IllegalArgumentException("Unexpected value: " + critere);
+}
+		
+
+	}
+	/**
+	 * Evaluates gini  for the parameter data
+	 * Store the number of occurences of each class in classificationRef
+	 * Calculate pk from classificationRef
+	 * @param data
+	 * @return
+	 */
+
 	
 	/**
 	 * RECURSIVE
@@ -547,14 +612,29 @@ public class DataSet {
 		
 		//Test dataset
 		ArrayList<HashMap<String,Double>> T = new ArrayList<HashMap<String,Double>>(fileData.subList((int)(fileData.size()*proportion), fileData.size()));
-		
-		String [] arbre = buildTree(A,"", "");
+		/*System.out.println("build tree with entropie critere");
+		String [] arbre = buildTree(A,"", "entropie");
 		
 		displayChildren(0,1);
 		
 		predict(arbre, T);
 		
 		System.out.println("profondeur : "+getProfondeur(0));
+		
+		System.out.println("-**********\n");*/
+		
+		
+		//arbre=null;*/
+//System.out.println(arbre);
+		System.out.println("build tree with gini critere \n");
+		String [] arbre = buildTree(A,"", "gini");
+		
+		displayChildren(0,1);
+		
+		predict(arbre, T);
+		
+		System.out.println("profondeur : "+getProfondeur(0));
+		
 
 	}
 }
