@@ -23,6 +23,7 @@ public class DataSet {
 	static int classAttributeIndex;
 	static String attributeToPredict;
 	static String critere;//entropie ou gini
+	static String [] criterePossible= {"entropie","gini"};
 
 	public DataSet() {
 		// TODO Auto-generated constructor stub
@@ -141,6 +142,12 @@ public class DataSet {
 	public static String [] buildTree(ArrayList<HashMap<String,Double>> fileData,String variableType,String critere) {
 
 		//critere=critere;
+		
+		if(!(Arrays.asList(criterePossible).contains(critere))) {
+			
+			throw new IllegalArgumentException("Unexpected value: " + critere);
+		}
+		
 		long startTime = System.nanoTime();    
 		
 		/**
@@ -339,13 +346,23 @@ public class DataSet {
 	 */
 	public static double getGain(ArrayList<HashMap<String,Double>> data,ArrayList<HashMap<String,Double>>filsGauche,ArrayList<HashMap<String,Double>>filsDroit,String critere) {
 		
-		double entropieGenerale = 0;
+	/*	double entropieGenerale = 0;
 		double entropieGauche, entropieDroite;
 		double giniGeneral=0;
-		double giniGauche,giniDroit;
+		double giniGauche,giniDroit;*/
 		
+		double melangeGenerale=0;//peut etre entropie generale ou gini generale comme nommé dans le cours
+		double melanageGauche;
+		double melangeDroit;
 		double gain;
-		switch (critere) {
+		
+		melangeGenerale=getCritere(data, critere);
+		melanageGauche= ((((double)filsGauche.size())/data.size())*getCritere(filsGauche,critere));;
+		melangeDroit=((((double)filsDroit.size())/data.size())*getCritere(filsDroit,critere));
+		gain=melangeGenerale-melanageGauche-melangeDroit;
+		return gain;
+		
+		/*switch (critere) {
 		case "entropie": {
 			entropieGenerale = getCritere(data,"entropie");
 			
@@ -373,7 +390,7 @@ public class DataSet {
 		default:
 			throw new IllegalArgumentException("Unexpected value: " + critere);
 		}
-		
+		*/
 		
 	
 	}
