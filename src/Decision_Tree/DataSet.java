@@ -1,12 +1,10 @@
+
+
 package Decision_Tree;
 import java.io.IOException;
 import java.nio.file.*;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.*;
 import java.lang.Math.*;
-
-import java.util.List;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
@@ -16,9 +14,14 @@ import java.util.stream.Collectors;
 public class DataSet {
 
 	static String [] arbre;
+	static String  [] arbre2;
 	static HashMap<Double,String> mapClass;
 	static int classAttributeIndex;
 	static String attributeToPredict;
+	static String critere;//entropie ou gini
+	static final String CRITERIA_GINI = "gini";
+	static final String CRITERIA_ENTROPIE = "entropie";
+	static String [] criterePossible= {CRITERIA_GINI,CRITERIA_ENTROPIE};
 
 	public DataSet() {
 		// TODO Auto-generated constructor stub
@@ -136,6 +139,12 @@ public class DataSet {
 	 */
 	public static String [] buildTree(ArrayList<HashMap<String,Double>> fileData,String variableType,String critere) {
 
+		//critere=critere;
+		
+		if(!(Arrays.asList(criterePossible).contains(critere))) {
+			
+			throw new IllegalArgumentException("Unexpected value: " + critere);
+		}
 		
 		long startTime = System.nanoTime();    
 		
@@ -151,7 +160,7 @@ public class DataSet {
 		arbre=new String [100000000];
 		
 		
-		addNode(fileData,0) ;
+		addNode(fileData,0,critere) ;
 		
 		long timeToCalculate = System.nanoTime() - startTime;
 		
@@ -173,7 +182,7 @@ public class DataSet {
 	 * @param indexcurrent : the index of the array to add the children nodes
 	 */
 	
-	public static void addNode(ArrayList<HashMap<String,Double>> data,int indexcurrent) {
+	public static void addNode(ArrayList<HashMap<String,Double>> data,int indexcurrent,String critere) {
 
 		if(data.size()==0)
 			return;
@@ -181,8 +190,12 @@ public class DataSet {
 		ArrayList<HashMap<String,Double>> donneesGauche = new ArrayList<>();
 		ArrayList<HashMap<String,Double>> donneesDroite =  new ArrayList<>();
 		
-
-		String a=getCondition(data);
+/*
+ * i get condition returned by the function getCondition which i will use it to determine the position of 
+ * node 
+ * the condition returned by getCondition is always written in  this format :attribut<= value
+ */
+		String a=getCondition(data,critere);
 		
 		arbre[indexcurrent]=a;
 		
@@ -218,7 +231,7 @@ public class DataSet {
 		}
 		else {
 			
-			addNode(donneesGauche, (indexcurrent*2)+1);
+			addNode(donneesGauche, (indexcurrent*2)+1,critere);
 		}
 	
 	
@@ -236,7 +249,7 @@ public class DataSet {
 		}
 		else {
 			
-			addNode(donneesDroite, (indexcurrent*2)+2);
+			addNode(donneesDroite, (indexcurrent*2)+2,critere);
 		}
 		
 		
@@ -253,7 +266,7 @@ public class DataSet {
 	 * @param data : the data partition to branch
 	 * @return : a String containing the boolean test i.e : "attribute<=value" that will be parsed by addNode()
 	 */
-	public static String getCondition(ArrayList<HashMap<String,Double>> data) {
+	public static String getCondition(ArrayList<HashMap<String,Double>> data,String critere) {
 		
 		double gain;
 		double maxGain= 0;
@@ -307,7 +320,7 @@ public class DataSet {
 					}
 				}
 				
-				gain=getGain(data,filsGauche,filsDroit);
+				gain=getGain(data,filsGauche,filsDroit,critere);
 				
 				if( gain > maxGain) {
 
@@ -329,18 +342,54 @@ public class DataSet {
 	 * @param filsDroit : right child data
 	 * @return
 	 */
-	public static double getGain(ArrayList<HashMap<String,Double>> data,ArrayList<HashMap<String,Double>>filsGauche,ArrayList<HashMap<String,Double>>filsDroit) {
+	public static double getGain(ArrayList<HashMap<String,Double>> data,ArrayList<HashMap<String,Double>>filsGauche,ArrayList<HashMap<String,Double>>filsDroit,String critere) {
 		
-		double entropieGenerale = 0;
+	/*	double entropieGenerale = 0;
 		double entropieGauche, entropieDroite;
+		double giniGeneral=0;
+		double giniGauche,giniDroit;*/
 		
-		entropieGenerale = getEntropie(data);
+		double melangeGenerale=0;//peut etre entropie generale ou gini generale comme nommé dans le cours
+		double melanageGauche;
+		double melangeDroit;
+		double gain;
 		
-		entropieGauche = ((((double)filsGauche.size())/data.size())*getEntropie(filsGauche));
+		melangeGenerale=getCritere(data, critere);
+		melanageGauche= ((((double)filsGauche.size())/data.size())*getCritere(filsGauche,critere));;
+		melangeDroit=((((double)filsDroit.size())/data.size())*getCritere(filsDroit,critere));
+		gain=melangeGenerale-melanageGauche-melangeDroit;
+		return gain;
 		
-		entropieDroite = ((((double)filsDroit.size())/data.size())*getEntropie(filsDroit));
+		/*switch (critere) {
+		case "entropie": {
+			entropieGenerale = getCritere(data,"entropie");
+			
+			entropieGauche = ((((double)filsGauche.size())/data.size())*getCritere(filsGauche,"entropie"));
+			
+			entropieDroite = ((((double)filsDroit.size())/data.size())*getCritere(filsDroit,"entropie"));
+			
+			gain=entropieGenerale-entropieGauche-entropieDroite;
+			
+			return gain;
+			
+			//yield type;
+		}
+		case "gini":{
+			giniGeneral=getCritere(data,"gini");
+			
+			giniGauche=((((double)filsGauche.size())/data.size())*getCritere(filsGauche,"gini"));
+			
+			giniDroit= ((((double)filsDroit.size())/data.size())*getCritere(filsDroit,"gini"));
+			
+			gain =giniGeneral-giniGauche-giniDroit;
+			return gain ;
+			
+		}
+		default:
+			throw new IllegalArgumentException("Unexpected value: " + critere);
+		}
+		*/
 		
-		return entropieGenerale-entropieGauche-entropieDroite;
 	
 	}
 	
@@ -352,9 +401,11 @@ public class DataSet {
 	 * @return
 	 */
 	
-	public static double getEntropie(ArrayList<HashMap<String,Double>> data) {
+	public static double getCritere(ArrayList<HashMap<String,Double>> data,String critere) {
 
 		double entropie=0;
+
+		double gini=0;
 		double pk;
 		int tailleData=data.size();
 		
@@ -386,21 +437,54 @@ public class DataSet {
 			}
 		}
 		
+switch (critere) {
+case "entropie": {
+	
+	for (double classification : allClassification) {
 
-		for (double classification : allClassification) {
-
-			
-			//pk = nombre de fois ou la classe est trouveee / taille de l echantillon
-			
-			pk= ((double)classificationRef.get(classification))/tailleData;
-			
-			entropie += (pk*Math.log(pk));
- 
-		}
 		
-		return (-1 * entropie) ;
+		//pk = nombre de fois ou la classe est trouveee / taille de l echantillon
+		
+		pk= ((double)classificationRef.get(classification))/tailleData;
+		
+		entropie += (pk*Math.log(pk));
 
 	}
+	
+	return (-1 * entropie) ;
+	
+	//yield type;
+}
+case "gini":{
+	
+	//pk = nombre de fois ou la classe est trouveee / taille de l echantillon
+	for (double classification : allClassification) {
+			pk= ((double)classificationRef.get(classification))/tailleData;
+			
+			gini+=Math.pow(pk,2);
+			
+			
+	}
+	return(1-gini);
+	
+	
+}
+	
+	
+default:
+	throw new IllegalArgumentException("Unexpected value: " + critere);
+}
+		
+
+	}
+	/**
+	 * Evaluates gini  for the parameter data
+	 * Store the number of occurences of each class in classificationRef
+	 * Calculate pk from classificationRef
+	 * @param data
+	 * @return
+	 */
+
 	
 	/**
 	 * RECURSIVE
@@ -413,25 +497,25 @@ public class DataSet {
 		
 		System.out.print(arbre[index]);
 		
-		if ((index*2) +1 <= 1000) {
-			if (arbre[(index*2) +1] != null) {
-				System.out.println();
-				for (int i=0;i<offset;i++) {
-					System.out.print("\t");
-				}
-				
-				displayChildren((index*2) +1, offset+1);
-			}	
-			if (arbre[(index*2) +2] != null) {
-				System.out.println();
-				for (int i=0;i<offset;i++) {
-					System.out.print("\t");
-				}
-				
-				displayChildren((index*2) +2, offset+1);
-				
-			}	
-		}
+		
+		if (arbre[(index*2) +1] != null) {
+			System.out.println();
+			for (int i=0;i<offset;i++) {
+				System.out.print("\t");
+			}
+			
+			displayChildren((index*2) +1, offset+1);
+		}	
+		if (arbre[(index*2) +2] != null) {
+			System.out.println();
+			for (int i=0;i<offset;i++) {
+				System.out.print("\t");
+			}
+			
+			displayChildren((index*2) +2, offset+1);
+			
+		}	
+		
 		
 		
 	}
@@ -465,7 +549,7 @@ public class DataSet {
 	 * @param arbre
 	 * @param testData
 	 */
-	public static void predict(String [] arbre, ArrayList<HashMap<String,Double>> testData) {
+	public static double predict(String [] arbre, ArrayList<HashMap<String,Double>> testData) {
 		
 		String node;
 		double errors = 0;
@@ -511,6 +595,11 @@ public class DataSet {
 		
 		System.out.println("taux erreur (prediction) : "+(errors/total*100)+" %");
 		
+		return (errors/total*100);
+	}
+	
+	public static String [] pruneTree(String [] arbre, ArrayList<HashMap<String,Double>> data, double alpha) {
+		return null;
 	}
 	
 	public static void main(String[] args) throws IOException{
@@ -520,37 +609,69 @@ public class DataSet {
 		
 		// LETTERS
 		
-		attributeToPredict = "lettr";
+		/*attributeToPredict = "lettr";
 		String attributeIndex =  "lettr,x-box,y-box,width,high,onpix,x-bar,y-bar,x2bar,y2bar,xybar,x2ybr,xy2br,x-ege,xegvy,y-ege,yegvx";
 		String file = "D:\\Téléchargements\\letter-recognition.data";
-		
+		*/
 		
 		// IRIS
-		/*
+		
 		attributeToPredict = "class";
 		String attributeIndex = "sepalLength,sepalWidth,petalLength,petalWidth,class";
+		//String file = "C:\\Users\\elake\\OneDrive\\Bureau\\M2Miage\\dataanalyse\\projet_graphe\\iris (1).csv";
 		String file = "D:\\Téléchargements\\iris.data";
-		*/
+		
+		
 		
 		ArrayList<HashMap<String,Double>> fileData = getFileData(file,attributeToPredict, attributeIndex);
 		
 		Collections.shuffle(fileData);
 		
-		double proportion = 0.6;
+		double minErreur = 100;
+		double erreur;
 		
-		//Training dataset
-		ArrayList<HashMap<String,Double>> A = new ArrayList<HashMap<String,Double>>(fileData.subList(0, (int)(fileData.size()*proportion)));
+		int numberOfIterations = 10;
 		
-		//Test dataset
-		ArrayList<HashMap<String,Double>> T = new ArrayList<HashMap<String,Double>>(fileData.subList((int)(fileData.size()*proportion), fileData.size()));
+		System.out.println("Resultat de "+numberOfIterations+ " iteration"+ (numberOfIterations <=1 ? "" : "s") +" :");
 		
-		String [] arbre = buildTree(A,"", "");
+		for (int i=0;i<numberOfIterations;i++) {
+			
+			System.out.println();
+			System.out.println(" ---");
+			System.out.println();
+			
+			Collections.shuffle(fileData);
+			
+			double proportion = 0.6;
+			
+			//Training dataset
+			ArrayList<HashMap<String,Double>> A = new ArrayList<HashMap<String,Double>>(fileData.subList(0, (int)(fileData.size()*proportion)));
+			
+			//Test dataset
+			ArrayList<HashMap<String,Double>> T = new ArrayList<HashMap<String,Double>>(fileData.subList((int)(fileData.size()*proportion), fileData.size()));
+			
+			String [] arbre = buildTree(A,"", CRITERIA_GINI);
+			
+			//if (numberOfIterations < 2) {
+				displayChildren(0,1);
+				System.out.println();
+			//}
+			
+			
+			
+			erreur = predict(arbre, T);
+			
+			if (erreur < minErreur) {
+				minErreur = erreur;
+			}
+			
+			System.out.println("profondeur : "+getProfondeur(0));
+			System.out.println("erreur : "+erreur+ " %");
+		}
 		
-		displayChildren(0,1);
+		System.out.println();
+		System.out.println("min erreur : "+minErreur+ " %");
 		
-		predict(arbre, T);
-		
-		System.out.println("profondeur : "+getProfondeur(0));
 
 	}
 }
