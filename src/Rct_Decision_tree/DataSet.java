@@ -1,10 +1,14 @@
+package Rct_Decision_tree;
 
-
-package Decision_Tree;
+//package Decision_Tree;
 import java.io.IOException;
 import java.nio.file.*;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.*;
 import java.lang.Math.*;
+
+import java.util.List;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
@@ -19,13 +23,6 @@ public class DataSet {
 	static int classAttributeIndex;
 	static String attributeToPredict;
 	static String critere;//entropie ou gini
-<<<<<<< HEAD
-	static final String CRITERIA_GINI = "gini";
-	static final String CRITERIA_ENTROPIE = "entropie";
-	static String [] criterePossible= {CRITERIA_GINI,CRITERIA_ENTROPIE};
-=======
-	static String [] criterePossible= {"entropie","gini"};
->>>>>>> d3fd7a148c4936b3e877e51e147c44d1fed952e7
 
 	public DataSet() {
 		// TODO Auto-generated constructor stub
@@ -144,12 +141,6 @@ public class DataSet {
 	public static String [] buildTree(ArrayList<HashMap<String,Double>> fileData,String variableType,String critere) {
 
 		//critere=critere;
-		
-		if(!(Arrays.asList(criterePossible).contains(critere))) {
-			
-			throw new IllegalArgumentException("Unexpected value: " + critere);
-		}
-		
 		long startTime = System.nanoTime();    
 		
 		/**
@@ -348,23 +339,13 @@ public class DataSet {
 	 */
 	public static double getGain(ArrayList<HashMap<String,Double>> data,ArrayList<HashMap<String,Double>>filsGauche,ArrayList<HashMap<String,Double>>filsDroit,String critere) {
 		
-	/*	double entropieGenerale = 0;
+		double entropieGenerale = 0;
 		double entropieGauche, entropieDroite;
 		double giniGeneral=0;
-		double giniGauche,giniDroit;*/
+		double giniGauche,giniDroit;
 		
-		double melangeGenerale=0;//peut etre entropie generale ou gini generale comme nommé dans le cours
-		double melanageGauche;
-		double melangeDroit;
 		double gain;
-		
-		melangeGenerale=getCritere(data, critere);
-		melanageGauche= ((((double)filsGauche.size())/data.size())*getCritere(filsGauche,critere));;
-		melangeDroit=((((double)filsDroit.size())/data.size())*getCritere(filsDroit,critere));
-		gain=melangeGenerale-melanageGauche-melangeDroit;
-		return gain;
-		
-		/*switch (critere) {
+		switch (critere) {
 		case "entropie": {
 			entropieGenerale = getCritere(data,"entropie");
 			
@@ -392,7 +373,7 @@ public class DataSet {
 		default:
 			throw new IllegalArgumentException("Unexpected value: " + critere);
 		}
-		*/
+		
 		
 	
 	}
@@ -501,25 +482,25 @@ default:
 		
 		System.out.print(arbre[index]);
 		
-		
-		if (arbre[(index*2) +1] != null) {
-			System.out.println();
-			for (int i=0;i<offset;i++) {
-				System.out.print("\t");
-			}
-			
-			displayChildren((index*2) +1, offset+1);
-		}	
-		if (arbre[(index*2) +2] != null) {
-			System.out.println();
-			for (int i=0;i<offset;i++) {
-				System.out.print("\t");
-			}
-			
-			displayChildren((index*2) +2, offset+1);
-			
-		}	
-		
+		if ((index*2) +1 <= 1000) {
+			if (arbre[(index*2) +1] != null) {
+				System.out.println();
+				for (int i=0;i<offset;i++) {
+					System.out.print("\t");
+				}
+				
+				displayChildren((index*2) +1, offset+1);
+			}	
+			if (arbre[(index*2) +2] != null) {
+				System.out.println();
+				for (int i=0;i<offset;i++) {
+					System.out.print("\t");
+				}
+				
+				displayChildren((index*2) +2, offset+1);
+				
+			}	
+		}
 		
 		
 	}
@@ -553,7 +534,7 @@ default:
 	 * @param arbre
 	 * @param testData
 	 */
-	public static double predict(String [] arbre, ArrayList<HashMap<String,Double>> testData) {
+	public static void predict(String [] arbre, ArrayList<HashMap<String,Double>> testData) {
 		
 		String node;
 		double errors = 0;
@@ -599,11 +580,6 @@ default:
 		
 		System.out.println("taux erreur (prediction) : "+(errors/total*100)+" %");
 		
-		return (errors/total*100);
-	}
-	
-	public static String [] pruneTree(String [] arbre, ArrayList<HashMap<String,Double>> data, double alpha) {
-		return null;
 	}
 	
 	public static void main(String[] args) throws IOException{
@@ -615,34 +591,25 @@ default:
 		
 		/*attributeToPredict = "lettr";
 		String attributeIndex =  "lettr,x-box,y-box,width,high,onpix,x-bar,y-bar,x2bar,y2bar,xybar,x2ybr,xy2br,x-ege,xegvy,y-ege,yegvx";
-		String file = "D:\\Téléchargements\\letter-recognition.data";
+		String file = "D:\\TÃ©lÃ©chargements\\letter-recognition.data";
 		*/
 		
 		// IRIS
 		
 		attributeToPredict = "class";
 		String attributeIndex = "sepalLength,sepalWidth,petalLength,petalWidth,class";
-<<<<<<< HEAD
-		//String file = "C:\\Users\\elake\\OneDrive\\Bureau\\M2Miage\\dataanalyse\\projet_graphe\\iris (1).csv";
-		String file = "D:\\Téléchargements\\iris.data";
-		
-=======
 		String file = "C:\\Users\\elake\\OneDrive\\Bureau\\M2Miage\\dataanalyse\\projet_graphe\\iris (1).csv";
->>>>>>> d3fd7a148c4936b3e877e51e147c44d1fed952e7
 		
 		
 		ArrayList<HashMap<String,Double>> fileData = getFileData(file,attributeToPredict, attributeIndex);
 		
 		Collections.shuffle(fileData);
 		
-		double minErreur = 100;
-		double erreur;
+		double proportion = 0.6;
 		
-<<<<<<< HEAD
-		int numberOfIterations = 10;
+		//Training dataset
+		ArrayList<HashMap<String,Double>> A = new ArrayList<HashMap<String,Double>>(fileData.subList(0, (int)(fileData.size()*proportion)));
 		
-		System.out.println("Resultat de "+numberOfIterations+ " iteration"+ (numberOfIterations <=1 ? "" : "s") +" :");
-=======
 		//Test dataset
 		ArrayList<HashMap<String,Double>> T = new ArrayList<HashMap<String,Double>>(fileData.subList((int)(fileData.size()*proportion), fileData.size()));
 		/*System.out.println("build tree with entropie critere");
@@ -661,51 +628,13 @@ default:
 //System.out.println(arbre);
 		System.out.println("build tree with gini critere \n");
 		String [] arbre = buildTree(A,"", "gini");
->>>>>>> d3fd7a148c4936b3e877e51e147c44d1fed952e7
 		
-		for (int i=0;i<numberOfIterations;i++) {
-			
-			System.out.println();
-			System.out.println(" ---");
-			System.out.println();
-			
-			Collections.shuffle(fileData);
-			
-			double proportion = 0.6;
-			
-			//Training dataset
-			ArrayList<HashMap<String,Double>> A = new ArrayList<HashMap<String,Double>>(fileData.subList(0, (int)(fileData.size()*proportion)));
-			
-			//Test dataset
-			ArrayList<HashMap<String,Double>> T = new ArrayList<HashMap<String,Double>>(fileData.subList((int)(fileData.size()*proportion), fileData.size()));
-			
-			String [] arbre = buildTree(A,"", CRITERIA_GINI);
-			
-			//if (numberOfIterations < 2) {
-				displayChildren(0,1);
-				System.out.println();
-			//}
-			
-			
-			
-			erreur = predict(arbre, T);
-			
-			if (erreur < minErreur) {
-				minErreur = erreur;
-			}
-			
-			System.out.println("profondeur : "+getProfondeur(0));
-			System.out.println("erreur : "+erreur+ " %");
-		}
+		displayChildren(0,1);
 		
-		System.out.println();
-		System.out.println("min erreur : "+minErreur+ " %");
+		predict(arbre, T);
 		
-<<<<<<< HEAD
-=======
 		System.out.println("profondeur : "+getProfondeur(0));
 		
->>>>>>> d3fd7a148c4936b3e877e51e147c44d1fed952e7
 
 	}
 }
