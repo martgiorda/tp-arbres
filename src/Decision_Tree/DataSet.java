@@ -17,14 +17,24 @@ public class DataSet {
 	static HashMap<Double,String> mapClass;
 	static int classAttributeIndex;
 	static String attributeToPredict;
-	static String critere;//entropie ou gini
-
+	static String critere;//entropia or gini
+	
+	static final String DATATYPE_CONTINUOUS = "continuous";
+	
 	static final String CRITERIA_GINI = "gini";
 	static final String CRITERIA_ENTROPIE = "entropie";
 	static String [] criterePossible= {CRITERIA_GINI,CRITERIA_ENTROPIE};
 	
+	static int [] nodesIterations;
+	static int [] nodesErrors;
 	static String datasetName;
-
+	
+	static Map<String, Integer> [] classOccurencsInNode;
+	
+	static List<String> allClass;
+	
+	static ArrayList<String []> tempPrunedTrees;
+	
 	/**
 	 * Returns an array of objects matching the file given in parameters
 	 * 
@@ -43,7 +53,7 @@ public class DataSet {
 		try {
 			//lignes = (ArrayList<String>) Files.readAllLines(path);
 			
-			lignes = getHTML(_path);
+			lignes = getHTTP(_path);
 		} catch (Exception e) {
 
 			lignes=null;
@@ -79,7 +89,7 @@ public class DataSet {
 
 		}
 
-		List<String> allClass = lignes.stream().filter(ligne -> !ligne.isEmpty()).map(ligne -> ligne.split(",")[classAttributeIndex]).distinct().sorted().collect(Collectors.toList());
+		allClass = lignes.stream().filter(ligne -> !ligne.isEmpty()).map(ligne -> ligne.split(",")[classAttributeIndex]).distinct().sorted().collect(Collectors.toList());
 
 		HashMap<String,Double> map2=new HashMap<>() ;
 		mapClass=new HashMap<>() ;
@@ -114,13 +124,7 @@ public class DataSet {
 			all.add(map);
 
 		}
-
-
-
-
 		return all;
-
-
 	}
 
 	/**
@@ -150,8 +154,7 @@ public class DataSet {
 		 *  Requires a large array because of the potential depth and number of branches of the tree
 		 *  Could be resized automatically and use Hashmap<Integer, String>
 		 */
-		arbre=new String [100000000];
-
+		arbre=new String [10000];
 
 		addNode(fileData,0,critere) ;
 
@@ -363,7 +366,7 @@ public class DataSet {
 		ArrayList<Double> allClassification=new ArrayList<>();
 
 
-		//compter les occurences de chaque classe
+		//count each class occurences
 
 		for(HashMap<String,Double>element:data) {
 
@@ -377,7 +380,7 @@ public class DataSet {
 
 			}
 			else {
-				//identification d'une nouvelle classe 
+				//new class identification
 				classificationRef.put(element.get(attributeToPredict),1);
 
 				allClassification.add(element.get(attributeToPredict));
@@ -391,7 +394,7 @@ public class DataSet {
 			for (double classification : allClassification) {
 
 
-				//pk = nombre de fois ou la classe est trouvee / taille de l echantillon
+				//pk = number of times where the class is found / size of the given sub-dataset
 
 				pk= ((double)classificationRef.get(classification))/tailleData;
 
@@ -405,7 +408,7 @@ public class DataSet {
 		}
 			case CRITERIA_GINI :{
 
-			//pk = nombre de fois ou la classe est trouvee / taille de l echantillon
+			//pk = number of times where the class is found / size of the given sub-dataset
 			for (double classification : allClassification) {
 				pk= ((double)classificationRef.get(classification))/tailleData;
 
@@ -433,7 +436,7 @@ public class DataSet {
 	 * @param index
 	 * @param offset
 	 */
-	public static void displayChildren(int index, int offset) {
+	public static void displayChildren(String [] arbre, int index, int offset) {
 
 
 		System.out.print(arbre[index]);
@@ -445,7 +448,7 @@ public class DataSet {
 				System.out.print("\t");
 			}
 
-			displayChildren((index*2) +1, offset+1);
+			displayChildren(arbre, (index*2) +1, offset+1);
 		}	
 		if (arbre[(index*2) +2] != null) {
 			System.out.println();
@@ -453,7 +456,7 @@ public class DataSet {
 				System.out.print("\t");
 			}
 
-			displayChildren((index*2) +2, offset+1);
+			displayChildren(arbre, (index*2) +2, offset+1);
 
 		}	
 
@@ -481,7 +484,41 @@ public class DataSet {
 
 
 	}
+	
+	/**
+	 * Returns the error % of the prediction for all the vectors in the test Dataset
+	 * @param arbre
+	 * @param testData
+	 * @return
+	 */
+	
+	public static double predictForWholeDataset (String [] arbre, ArrayList<HashMap<String,Double>> testData) {
 
+		
+		double errors = 0;
+		int total = testData.size();
+		
+		//Loop for each vector to test
+		for (HashMap<String,Double> vector : testData) {
+
+			// The class is stored as a number in the loaded dataset (1.0, 2.0) 
+			// So the value has to be translated to the correct String  
+			String valueToPredict = mapClass.get(vector.get(attributeToPredict));
+			
+			
+			// Compare the prediction to the correct value
+			if (predict(arbre, vector)  != valueToPredict) {
+				errors ++;
+			}
+
+		}
+		System.out.println();
+
+		//System.out.println("taux erreur (prediction) : "+(errors/total*100)+" %");
+
+		return (errors/total*100);
+	}
+	
 	/**
 	 * Predicts the class of the testData individuals using the decision tree arbre
 	 * 
@@ -490,56 +527,38 @@ public class DataSet {
 	 * @param arbre
 	 * @param testData
 	 */
-	public static double predict(String [] arbre, ArrayList<HashMap<String,Double>> testData) {
-
-		String node;
-		double errors = 0;
-		int total = testData.size();
+	
+	public static String predict (String [] arbre, HashMap<String,Double> vector) {
+		
+		//Navigate the decision tree to find the node containing the class
+		
 		int index = 0;
+		String node = arbre[index];
+		
+		while (node.contains("<=")) {
 
-		//Loop for each vector to test
-		for (HashMap<String,Double> ligne : testData) {
+			//node is a condition
 
-			index = 0;
+			String attribut =node.split("<=")[0];
+			double value= Double.parseDouble(node.split("<=")[1]);
+
+			if (vector.get(attribut) <= value) {
+				index = index*2 +1;
+			}
+			else {
+				index = index*2 +2;
+			}
 
 			node = arbre[index];
-
-			//Navigate the decision tree to find the node containing the class
-			while (node.contains("<=")) {
-
-				//node is a condition
-
-				String attribut =node.split("<=")[0];
-				double value= Double.parseDouble(node.split("<=")[1]);
-
-				if (ligne.get(attribut) <= value) {
-					index = index*2 +1;
-				}
-				else {
-					index = index*2 +2;
-				}
-
-				node = arbre[index];
-			}
-
-			//node contains a class
-
-			//Reminder : the class is stored as a number in the dataset (1.0, 2.0) 
-			String classeLigne = mapClass.get(ligne.get(attributeToPredict));
-
-			if (classeLigne != node) {
-				errors ++;
-			}
-
 		}
-		System.out.println();
 
-		System.out.println("taux erreur (prediction) : "+(errors/total*100)+" %");
+		//node contains a class
 
-		return (errors/total*100);
+		return node;
 	}
-
-	public static ArrayList<String> getHTML(String urlToRead) throws Exception {
+	
+	
+	public static ArrayList<String> getHTTP(String urlToRead) throws Exception {
 		  ArrayList<String> body = new ArrayList<String>();
 	      //StringBuilder result = new StringBuilder();
 	      URL url = new URL(urlToRead);
@@ -555,17 +574,211 @@ public class DataSet {
 		   
 	}
 	
+	
+	
+	public static int getClassOccurences (String [] arbre, int index, String classAttribute) {
+		
+		if (classOccurencsInNode[index] == null) {
+			
+			classOccurencsInNode[index] = new HashMap<String, Integer>();
+			
+		}
+		
+		if (!arbre[index].contains("<=")) {
+			
+			if (arbre[index].equals(classAttribute)) {
+				return 1;
+			}
+			else {
+				return 0;
+			}
+			
+		}
+		
+		else {
+			
+			int result = getClassOccurences (arbre, index*2+1, classAttribute) + getClassOccurences (arbre, index*2+2, classAttribute);
+			
+			classOccurencsInNode[index].put(classAttribute, result);
+			
+			return result;
+		}
+		
+		
+		
+	}
+	
+	
+	public static void fillClassOccurencsInNode (String [] arbre) {
+		
+		for (String oneClass : allClass) {
+			
+			getClassOccurences (arbre, 0, oneClass);
+			
+		}
+		
+	}
+	
+	
+	public static int getLeafNumber(int index) {
+		int sum =0;
+		for (String oneClass : allClass) {
+			sum += classOccurencsInNode[index].get(oneClass);
+		}
+		return sum;
+	}
+	
+	public static double getPruningCriteria (int index) {
+		
+		double critere;
+		
+		int maxOccurences = 0;
+		int tempOccurences;
+		
+		int sumOfOccurences = 0;
+		
+		for (String oneClass : allClass) {
+			
+			tempOccurences = classOccurencsInNode[index].get(oneClass);
+			
+			sumOfOccurences += tempOccurences;
+			
+			if (tempOccurences > maxOccurences) {
+				maxOccurences = tempOccurences;
+			}
+		}
+		
+		int individusMalClassesInNode = sumOfOccurences - maxOccurences;
+		
+		int nbFeuillesTotal = getLeafNumber(0);
+		
+		int nbLeafChildren = getLeafNumber(index); 
+		
+		critere = (double)(individusMalClassesInNode)/(nbFeuillesTotal*(nbLeafChildren - 1));
+				
+		return critere;
+	}
+	
+	public static void killChildren (String [] arbre, int index) {
+		
+		arbre[index] = null;
+		
+		if (arbre[index*2+1] != null) {
+			killChildren(arbre,index*2+1);
+		}
+		
+		if (arbre[index*2+2] != null) {
+			killChildren(arbre,index*2+2);
+		}
+		
+		
+	}
+	
 	public static String [] pruneTree(String [] arbre, ArrayList<HashMap<String,Double>> data, double alpha) {
+	
+		double minTauxErreur = 100;
+		
+		int indexMinTauxErreur = 0;
+		
+		int treeIndex = 1;
+		
+		tempPrunedTrees = new ArrayList<String []>();
+	
+		tempPrunedTrees.add(arbre);
+		
+		String [] prunedTree = arbre.clone();
+		
+		do {
+			// Determine which node will be pruned
+			classOccurencsInNode = (Map<String, Integer>[]) new Map [arbre.length];
+			
+			fillClassOccurencsInNode(prunedTree);
+			
+			double minCritere = 1;
+			int minCritereIndex = 0;  
+			for (int i=0; i<classOccurencsInNode.length ; i++) {
+				
+				if (classOccurencsInNode[i] != null) {
+					
+					if (!classOccurencsInNode[i].isEmpty()) {
+						
+						double pruningCritere = getPruningCriteria(i);
+						
+						if (pruningCritere < minCritere) {
+							minCritere = pruningCritere;
+							minCritereIndex = i;
+						}
+						
+					}
+					
+				}
+					
+			}
+			
+			System.out.println("critere min : "+minCritere);
+			
+			// Determine which class will replace the node
+			
+			String dominantClass=allClass.get(0);
+			int maxClass = 0;
+			for (String oneClass : allClass) {
+				if (classOccurencsInNode[minCritereIndex].get(oneClass) > maxClass) {
+					dominantClass = oneClass;
+				}
+			}
+			
+			System.out.println("class dominante critere min : "+dominantClass);
+			
+			// prune the tree
+			
+			prunedTree = arbre.clone();
+			
+			killChildren(prunedTree, minCritereIndex);
+			
+			prunedTree[minCritereIndex] = dominantClass;
+			
+			tempPrunedTrees.add(prunedTree);
+			
+			displayChildren(prunedTree, 0, 1);
+			
+			System.out.println();
+			
+			double tauxErreur = predictForWholeDataset(prunedTree, data);
+			
+			System.out.println("Taux erreur : "+tauxErreur);
+			
+			if (tauxErreur < minTauxErreur) {
+				minTauxErreur = tauxErreur;
+				indexMinTauxErreur = treeIndex;
+			}
+			
+			
+			treeIndex ++;
+		}
+		
+		while (prunedTree[0].contains("<="));
+		
+		System.out.println();
+		System.out.println();
+		System.out.println();
+		
+		System.out.println("min tx erreur : "+minTauxErreur);
+		
+		System.out.println();
+		displayChildren(tempPrunedTrees.get(indexMinTauxErreur), 0, 1);
+		System.out.println();
+		
 		return null;
 	}
-
+	
 	public static void main(String[] args) throws IOException{
 
 
 		//UNCOMMENT THE GROUP OF LINES CORRESPONDING TO THE DATASET YOU WANT
 
-		// LETTERS
 		/*
+		// LETTERS
+		
 		datasetName = "Letters";
 		attributeToPredict = "lettr";
 		String attributeIndex =  "lettr,x-box,y-box,width,high,onpix,x-bar,y-bar,x2bar,y2bar,xybar,x2ybr,xy2br,x-ege,xegvy,y-ege,yegvx";
@@ -573,7 +786,9 @@ public class DataSet {
 		//Will do HTTP GET Request on the link
 		String file = "https://archive.ics.uci.edu/ml/machine-learning-databases/letter-recognition/letter-recognition.data";
 		*/
-
+		
+		
+		
 		// IRIS
 		
 		datasetName = "Iris";
@@ -583,16 +798,13 @@ public class DataSet {
 		//Will do HTTP GET Request on the link
 		String file = "https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data";
 		
-
+		
 		ArrayList<HashMap<String,Double>> fileData = getFileData(file,attributeToPredict, attributeIndex);
-
-		Collections.shuffle(fileData);
-
+	
 		double minErreur = 100;
 		double erreur;
 
-
-		int numberOfIterations = 10;
+		int numberOfIterations = 1;
 		
 		System.out.println("Resultat de "+numberOfIterations+ " iteration"+ (numberOfIterations <=1 ? "" : "s") +" de "+ datasetName+" :");
 
@@ -612,13 +824,25 @@ public class DataSet {
 			//Test dataset
 			ArrayList<HashMap<String,Double>> T = new ArrayList<HashMap<String,Double>>(fileData.subList((int)(fileData.size()*proportion), fileData.size()));
 
-			//arbre = buildTree(A,"", CRITERIA_GINI);
-			arbre = buildTree(A,"", CRITERIA_ENTROPIE);
+			arbre = buildTree(A,DATATYPE_CONTINUOUS, CRITERIA_GINI);
 			
-			displayChildren(0,1);
+			System.out.println("erreur : "+predictForWholeDataset(arbre, T)+ " %");
+			
+			
+			
+			//arbre = buildTree(A,DATATYPE_CONTINUOUS, CRITERIA_ENTROPIE);
+			
+			displayChildren(arbre, 0,1);
+			
 			System.out.println();
-
-			erreur = predict(arbre, T);
+			
+			
+			
+			pruneTree(arbre, T, 1);
+			
+			
+			/*
+			erreur = predictForWholeDataset(arbre, T);
 
 			if (erreur < minErreur) {
 				minErreur = erreur;
@@ -626,13 +850,16 @@ public class DataSet {
 
 			System.out.println("profondeur : "+getProfondeur(0));
 			System.out.println("erreur : "+erreur+ " %");
+			
+			*/
 		}
-
+		
+		System.out.println("fini");
+		
+		/*
 		System.out.println();
 		System.out.println("min erreur : "+minErreur+ " %");
-
-		System.out.println("profondeur : "+getProfondeur(0));
-
+		*/
 	}
 }
 
